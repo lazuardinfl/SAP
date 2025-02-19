@@ -27,8 +27,7 @@ function Start-SAP {
             Start-Sleep -Seconds 1
         }
         if (!$ready) { throw "SAU GUI connection won't start" }
-        $SapGuiAuto = $SapROTWr.GetROTEntry("SAPGUI")
-        $application = Invoke-Method $SapGuiAuto "GetScriptingEngine"
+        $application = Invoke-Method $SapROTWr.GetROTEntry("SAPGUI") "GetScriptingEngine"
         if (!$new) {
             for ($i = 0; $i -lt (Get-Property $application "Connections").Length; $i++) {
                 $connection = Get-Property $application "Connections" @($i)
@@ -113,6 +112,20 @@ function Find-Element {
     )
     try { return Invoke-Method $object "findById" @($value) }
     catch { if ($silent) { return $null } else { throw } }
+}
+
+function Invoke-Click {
+    [OutputType([bool])]
+    param (
+        [Alias("SAPObject")] [System.__ComObject]$object,
+        [Alias("Element")] [string]$value,
+        [Alias("OnErrorContinue")] [switch]$silent
+    )
+    try {
+        Invoke-Method (Find-Element $object $value) "press" | Out-Null
+        return $true
+    }
+    catch { if ($silent) { return $false } else { throw } }
 }
 
 function Set-Text {
