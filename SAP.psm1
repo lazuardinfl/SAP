@@ -34,12 +34,14 @@ function Start-SAP {
                 $session = Get-Property $connection "Sessions" @(0)
                 if ($conn -and ((Get-Property $connection "ConnectionString") -match $conn) -and
                     $id -and ((Get-Property (Get-Property $session "Info") "User") -eq $id)) {
+                    Invoke-Method (Find-Element $session "wnd[0]") "maximize" | Out-Null
                     return $session
                 }
             }
         }
         $connection = Invoke-Method $application "OpenConnectionByConnectionString" @($conn, $true, $true)
         $session = Get-Property $connection "Sessions" @(0)
+        Invoke-Method (Find-Element $session "wnd[0]") "maximize" | Out-Null
         Set-Text $session "wnd[0]/usr/txtRSYST-BNAME" $id | Out-Null
         Set-Text $session "wnd[0]/usr/pwdRSYST-BCODE" $pass | Out-Null
         Invoke-Method (Find-Element $session "wnd[0]") "sendVKey" 0 | Out-Null
@@ -54,6 +56,39 @@ function Start-SAP {
         else { throw "SAP login '$($id)' password wrong or expired" }
     }
     catch { if ($silent) { return $null } else { throw } }
+}
+
+function Stop-SAP {
+    [OutputType([bool])]
+    param (
+        [Alias("SAPSession")] [System.__ComObject]$session,
+        [Alias("OnErrorContinue")] [switch]$silent
+    )
+    try {
+        if ($session) {
+            $connection = Get-Property $session "Parent"
+            Invoke-Method $connection "CloseConnection" | Out-Null
+        }
+        else {
+            $application = Invoke-Method (New-Object -ComObject "SapROTWr.SapROTWrapper").GetROTEntry("SAPGUI") "GetScriptingEngine"
+            $opened = (Get-Property $application "Connections").Length
+            for ($i = 0; $i -lt $opened; $i++) {
+                $connection = Get-Property $application "Connections" @(0)
+                Invoke-Method $connection "CloseConnection" | Out-Null
+            }
+            for ($i = 0; $i -lt 10; $i++) { Get-Process saplogon | ForEach-Object { $_.CloseMainWindow() } | Out-Null }
+            if (Get-Process saplogon -ErrorAction SilentlyContinue) {
+                $shell = New-Object -ComObject WScript.Shell
+                $shell.AppActivate((Get-Process saplogon).Id) | Out-Null
+                Start-Sleep -Seconds 1
+                $shell.SendKeys("%{F4}") | Out-Null
+            }
+            if (Get-Process saplogon -ErrorAction SilentlyContinue) { Get-Process saplogon | Stop-Process -Force }
+            Wait-Process saplogon -Timeout 5 -ErrorAction Stop
+        }
+        return $true
+    }
+    catch { if ($silent) { return $false } else { throw } }
 }
 
 function Invoke-SAP {
