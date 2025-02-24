@@ -77,12 +77,6 @@ function Stop-SAP {
                 Invoke-Method $connection "CloseConnection" | Out-Null
             }
             for ($i = 0; $i -lt 10; $i++) { Get-Process saplogon | ForEach-Object { $_.CloseMainWindow() } | Out-Null }
-            if (Get-Process saplogon -ErrorAction SilentlyContinue) {
-                $shell = New-Object -ComObject WScript.Shell
-                $shell.AppActivate((Get-Process saplogon).Id) | Out-Null
-                Start-Sleep -Seconds 1
-                $shell.SendKeys("%{F4}") | Out-Null
-            }
             if (Get-Process saplogon -ErrorAction SilentlyContinue) { Get-Process saplogon | Stop-Process -Force }
             Wait-Process saplogon -Timeout 5 -ErrorAction Stop
         }
