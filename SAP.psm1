@@ -76,9 +76,9 @@ function Stop-SAP {
                 $connection = Get-Property $application "Connections" @(0)
                 Invoke-Method $connection "CloseConnection" | Out-Null
             }
-            for ($i = 0; $i -lt 10; $i++) { Get-Process saplogon | ForEach-Object { $_.CloseMainWindow() } | Out-Null }
-            if (Get-Process saplogon -ErrorAction SilentlyContinue) { Get-Process saplogon | Stop-Process -Force }
-            Wait-Process saplogon -Timeout 5 -ErrorAction Stop
+            for ($i = 0; $i -lt 10; $i++) { Get-Process saplogon -ErrorAction SilentlyContinue | ForEach-Object { $_.CloseMainWindow() } | Out-Null }
+            Get-Process saplogon -ErrorAction SilentlyContinue | Stop-Process -Force
+            Get-Process saplogon -ErrorAction SilentlyContinue | Wait-Process -Timeout 5 -ErrorAction Stop
         }
         return $true
     }
@@ -167,6 +167,24 @@ function Set-Text {
     )
     try {
         Set-Property (Find-Element $object $value) "text" @($text) | Out-Null
+        return $true
+    }
+    catch { if ($silent) { return $false } else { throw } }
+}
+
+function Stop-ExcelFromSAP {
+    [OutputType([bool])]
+    param (
+        [Alias("OnErrorContinue")] [switch]$silent
+    )
+    try {
+        for ($i = 0; $i -lt 7; $i++) {
+            if (Get-Process excel -ErrorAction SilentlyContinue) { break }
+            Start-Sleep -Seconds 1
+        }
+        for ($i = 0; $i -lt 5; $i++) { Get-Process excel -ErrorAction SilentlyContinue | ForEach-Object { $_.CloseMainWindow() } | Out-Null }
+        Get-Process excel -ErrorAction SilentlyContinue | Stop-Process -Force
+        Get-Process excel -ErrorAction SilentlyContinue | Wait-Process -Timeout 5 -ErrorAction Stop
         return $true
     }
     catch { if ($silent) { return $false } else { throw } }
