@@ -1,5 +1,3 @@
-using namespace System.Reflection
-
 $SapGuiPath = "C:\Program Files\SAP\FrontEnd\SAPGUI\saplogon.exe"
 
 function Start-SAP {
@@ -148,10 +146,11 @@ function Invoke-Click {
     param (
         [Alias("SAPObject")] [System.__ComObject]$object,
         [Alias("Element")] [string]$value,
+        [Alias("ClickType")] [ValidateSet("Press", "Select")] [string]$type = "Press",
         [Alias("OnErrorContinue")] [switch]$silent
     )
     try {
-        Invoke-Method (Find-Element $object $value) "press" | Out-Null
+        Invoke-Method (Find-Element $object $value) $type | Out-Null
         return $true
     }
     catch { if ($silent) { return $false } else { throw } }
